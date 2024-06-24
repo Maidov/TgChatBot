@@ -1,62 +1,65 @@
 import telebot
-from config import TELEGRAM_BOT_TOKEN
-from tasks import add_task, get_last_10_tasks, get_tasks_for_today, mark_task_as_completed
-from weather import get_weather
+import requests
+import tasks
+from config import *
+from weather import *
 
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
+GISMETEO_API_URL = 'https://api.gismeteo.net/v2/weather/current/'
 
-#TODO: Переделать логику отображения/завершения задач
-# пользователь должен понимать какую задачу он выполняет
-# Либо нужно чтобы в любом списке были глобальные номера задач
-# Либо как-то ебаться с локальными
-
-#TODO: Переписать на русский фразы
-
-#TODO: Сделать функционал /help
-
-#TODO: Добавить кнопки
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, "Welcome to the Task Bot! You can manage your tasks and get weather updates.")
+    help_text = (
+        "Команды:\n"
+        "/add <описание> - Добавить новую задачу\n"
+        "/last10 - Получить список из 10 последних задач\n"
+        "/today - Получить список всех задач за сегодня\n"
+        "/done <задача> - Отметить задачу как выполненную\n"
+        "/weather <город> - Узнать погоду на день через Gismeteo\n"
+    )
+    bot.send_message(message.chat.id, help_text)
 
 @bot.message_handler(commands=['add'])
-def add_new_task(message):
-    task_text = message.text[len('/add '):].strip()
-    if task_text:
-        add_task(task_text)
-        bot.reply_to(message, "Task added successfully.")
+def new_task(message):
+    description = message.text[len('/add '):].strip()
+    if description:
+        tasks.add_task(message.from_user.id, description)
+        bot.send_message(message.chat.id, "Задача добавлена.")
     else:
-        bot.reply_to(message, "Please provide the task description after the command.")
+        bot.send_message(message.chat.id, "Введите описание задачи после команды /add.")
 
 @bot.message_handler(commands=['last10'])
-def send_last_10_tasks(message):
-    tasks = get_last_10_tasks()
-    if tasks:
-        response = "\n".join([f"{i + 1}. {task['text']} - {'Completed' if task['completed'] else 'Pending'}" for i, task in enumerate(tasks)])
-        bot.reply_to(message, response)
+def last_tasks(message):
+    last_tasks = tasks.get_last_tasks(message.from_user.id)
+    if last_tasks:
+        response = "Последние 10 задач:\n"
+        for idx, task in enumerate(last_tasks):
+            response += f"{idx + 1}. {task['description']} - {'Done' if task['done'] else 'Pending'} \n"
+        bot.send_message(message.chat.id, response)
     else:
-        bot.reply_to(message, "No tasks found.")
+        bot.send_message(message.chat.id, "У вас пока нет задач.")
 
 @bot.message_handler(commands=['today'])
-def send_today_tasks(message):
-    tasks = get_tasks_for_today()
-    if tasks:
-        response = "\n".join([f"{i + 1}. {task['text']} - {'Completed' if task['completed'] else 'Pending'}" for i, task in enumerate(tasks)])
-        bot.reply_to(message, response)
+def today_tasks(message):
+    today_tasks = tasks.get_today_tasks(message.from_user.id)
+    if today_tasks:
+        response = "Задачи на сегодня:\n"
+        for idx, task in enumerate(today_tasks):
+            response += f"{idx + 1}. {task['description']} - {'Done' if task['done'] else 'Pending'} \n"
+        bot.send_message(message.chat.id, response)
     else:
-        bot.reply_to(message, "No tasks found for today.")
+        bot.send_message(message.chat.id, "На сегодня задач нет.")
 
-@bot.message_handler(commands=['complete'])
-def complete_task(message):
+@bot.message_handler(commands=['done'])
+def done_task(message):
     try:
-        task_index = int(message.text[len('/complete '):].strip()) - 1
-        task = mark_task_as_completed(task_index)
-        if task:
-            bot.reply_to(message, "Task marked as completed.")
+        task_name = str(message.text[len('/done '):].strip()).lower()
+        if tasks.mark_task_done(message.from_user.id, task_name):
+            bot.send_message(message.chat.id, "Задача отмечена как выполненная.")
         else:
-            bot.reply_to(message, "Task not found.")
+            bot.send_message(message.chat.id, "Не удалось найти задачу.")
     except ValueError:
-        bot.reply_to(message, "Please provide a valid task number.")
+        bot.send_message(message.chat.id, "Пожалуйста, введите корректную задачу.")
 
 @bot.message_handler(commands=['weather'])
 def send_weather(message):
@@ -65,6 +68,7 @@ def send_weather(message):
         weather_info = get_weather(city)
         bot.reply_to(message, weather_info)
     else:
-        bot.reply_to(message, "Please provide the city name after the command.")
+        bot.reply_to(message, "Введите название города после команды /weather.")
 
-bot.polling()
+if __name__ == '__main__':
+    bot.polling(none_stop=True)

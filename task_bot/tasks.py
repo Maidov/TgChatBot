@@ -1,25 +1,56 @@
+import json
+import os
 from datetime import datetime
 
-tasks = []
+TASKS_FILE = 'tasks.json'
 
-def add_task(task_text):
+if not os.path.exists(TASKS_FILE):
+    with open(TASKS_FILE, 'w') as f:
+        json.dump({}, f)
+
+def load_tasks():
+    with open(TASKS_FILE, 'r') as f:
+        return json.load(f)
+
+def save_tasks(tasks):
+    with open(TASKS_FILE, 'w') as f:
+        json.dump(tasks, f, ensure_ascii=False, indent=4)
+
+def add_task(user_id, description):
+    tasks = load_tasks()
+    if str(user_id) not in tasks:
+        tasks[str(user_id)] = []
     task = {
-        'text': task_text,
-        'created_at': datetime.now(),
-        'completed': False
+        'description': description,
+        'date': str(datetime.now().date()),
+        'done': False
     }
-    tasks.append(task)
-    return task
+    tasks[str(user_id)].append(task)
+    save_tasks(tasks)
 
-def get_last_10_tasks():
-    return tasks[-10:]
+def get_last_tasks(user_id, n=10):
+    tasks = load_tasks()
+    print(user_id in tasks)
+    print(user_id)
+    print(tasks)
+    if str(user_id) in tasks:
+        return tasks[str(user_id)][-n:]
+    return []
 
-def get_tasks_for_today():
-    today = datetime.now().date()
-    return [task for task in tasks if task['created_at'].date() == today]
+def get_today_tasks(user_id):
+    tasks = load_tasks()
+    if str(user_id) in tasks:
+        today = str(datetime.now().date())
+        return [task for task in tasks[str(user_id)] if task['date'] == today]
+    return []
 
-def mark_task_as_completed(task_index):
-    if 0 <= task_index < len(tasks):
-        tasks[task_index]['completed'] = True
-        return tasks[task_index]
-    return None
+def mark_task_done(user_id, task_name):
+    tasks = load_tasks()
+    change = False
+    if str(user_id) in tasks:
+        for i in range(0, len(tasks[str(user_id)])):
+            if tasks[str(user_id)][i]["description"] == task_name:
+                change = True
+                tasks[str(user_id)][i]['done'] = True
+        save_tasks(tasks)
+    return change
