@@ -19,9 +19,11 @@ pip install -r requirements.txt
 ```
 #### Настройка
 - Создайте бота в Telegram и получите API токен.
-- Добавьте в файл config.py ваш API токен:
+- Создайте файл config.py и добавьте ваш API токен:
 ```python
-API_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
+# в файле config.py
+# Telegram Bot Token
+TELEGRAM_BOT_TOKEN = '7204419162:AAHemtbjQzQaqqQYK9QHniAsZN085fc1S7E'
 ```
 #### Запуск
 ```sh
