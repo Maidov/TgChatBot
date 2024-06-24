@@ -23,7 +23,7 @@ pip install -r requirements.txt
 ```python
 # в файле config.py
 # Telegram Bot Token
-TELEGRAM_BOT_TOKEN = '7204419162:AAHemtbjQzQaqqQYK9QHniAsZN085fc1S7E'
+TELEGRAM_BOT_TOKEN = '>>>YOUR TOKEN HERE<<<'
 ```
 #### Запуск
 ```sh
